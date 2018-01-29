@@ -682,7 +682,11 @@ HRESULT WINAPI VarCyCmp(_In_ const CY, _In_ const CY);
 HRESULT WINAPI VarCyCmpR8(_In_ const CY, _In_ DOUBLE);
 HRESULT WINAPI VarCyFix(_In_ const CY, _Out_ CY*);
 HRESULT WINAPI VarCyInt(_In_ const CY, _Out_ CY*);
+#ifdef __WINESRC__
 HRESULT WINAPI VarCyMul(_In_ const CY, _In_ CY, _Out_ CY*);
+#else
+HRESULT WINAPI VarCyMul(_In_ CY, _In_ CY, _Out_ CY*);
+#endif
 HRESULT WINAPI VarCyMulI4(_In_ const CY, _In_ LONG, _Out_ CY*);
 HRESULT WINAPI VarCyMulI8(_In_ const CY, _In_ LONG64, _Out_ CY*);
 HRESULT WINAPI VarCyNeg(_In_ const CY, _Out_ CY*);

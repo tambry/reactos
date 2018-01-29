@@ -1686,7 +1686,7 @@ UDFIsPathnameValid(
             // get next path part...
             TmpBuffer = PathName.Buffer;
             PathName.Buffer = UDFDissectName(PathName.Buffer,&(CurName.Length) );
-            PathName.Length -= (USHORT)((ULONG)(PathName.Buffer) - (ULONG)TmpBuffer);
+            PathName.Length -= (USHORT)((ULONG_PTR)(PathName.Buffer) - (ULONG_PTR)TmpBuffer);
             CurName.Buffer = PathName.Buffer - CurName.Length;
             CurName.Length *= sizeof(WCHAR);
             CurName.MaximumLength -= CurName.Length;

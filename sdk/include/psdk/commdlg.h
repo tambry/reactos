@@ -485,8 +485,8 @@ typedef struct tagPDA {
 typedef struct tagPDW {
 	DWORD lStructSize;
 	HWND hwndOwner;
-	HANDLE hDevMode;
-	HANDLE hDevNames;
+	HGLOBAL hDevMode;
+	HGLOBAL hDevNames;
 	HDC hDC;
 	DWORD Flags;
 	WORD nFromPage;
@@ -495,13 +495,13 @@ typedef struct tagPDW {
 	WORD nMaxPage;
 	WORD nCopies;
 	HINSTANCE hInstance;
-	DWORD lCustData;
+	LPARAM lCustData;
 	LPPRINTHOOKPROC lpfnPrintHook;
 	LPSETUPHOOKPROC lpfnSetupHook;
 	LPCWSTR lpPrintTemplateName;
 	LPCWSTR lpSetupTemplateName;
-	HANDLE hPrintTemplate;
-	HANDLE hSetupTemplate;
+	HGLOBAL hPrintTemplate;
+	HGLOBAL hSetupTemplate;
 } PRINTDLGW,*LPPRINTDLGW;
 #if (WINVER >= 0x0500) && !defined (__OBJC__)
 #include <prsht.h>   /* for HPROPSHEETPAGE  */

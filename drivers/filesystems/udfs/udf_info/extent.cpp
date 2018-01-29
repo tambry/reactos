@@ -799,7 +799,7 @@ UDFReadMappingFromXEntry(
     }
     default : {  // case ICB_FLAG_AD_IN_ICB
         Extent = NULL;
-        *Offset = (uint32)AllocDescs - (uint32)XEntry;
+        *Offset = (uintptr_t)AllocDescs - (uintptr_t)XEntry;
         AllocLoc->Offset=0;
         AllocLoc->Length=0;
         if(AllocLoc->Mapping) MyFreePool__(AllocLoc->Mapping);
@@ -3023,7 +3023,7 @@ UDFReadExtent(
 {
     (*ReadBytes) = 0;
     if(!ExtInfo || !ExtInfo->Mapping) return STATUS_INVALID_PARAMETER;
-    ASSERT((uint32)Buffer > 0x1000);
+    ASSERT((uintptr_t)Buffer > 0x1000);
 
     AdPrint(("Read ExtInfo %x, Mapping %x\n", ExtInfo, ExtInfo->Mapping));
 

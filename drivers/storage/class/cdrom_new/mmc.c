@@ -1233,7 +1233,7 @@ CdRompFlushDelayedList(
     IN BOOLEAN CalledFromWorkItem
     )
 {
-    PSINGLE_LIST_ENTRY list;
+    PSLIST_ENTRY list;
     PIRP irp;
 
     // NOTE - REF #0002

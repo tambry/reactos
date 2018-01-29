@@ -107,7 +107,7 @@ UDFTIOVerify(
     PUCHAR tmp_buff;
     PUCHAR p;
     PCHAR cached_block;
-    uint32 tmp_wb;
+    uintptr_t tmp_wb;
     BOOLEAN need_remap;
     OSSTATUS final_RC = STATUS_SUCCESS;
     BOOLEAN zero;
@@ -127,7 +127,7 @@ UDFTIOVerify(
     UDFAcquireResourceExclusive(&(Vcb->IoResource), TRUE);
     Flags |= PH_IO_LOCKED;
 
-    tmp_wb = (uint32)_Vcb;
+    tmp_wb = (uintptr_t)_Vcb;
     if(Flags & PH_EX_WRITE) {
         UDFPrint(("IO-Write-Verify\n"));
         RC = UDFTWrite(_Vcb, Buffer, Length, LBA, &tmp_wb, Flags | PH_VCB_IN_RETLEN);
@@ -248,7 +248,7 @@ UDFTIOVerify(
             packet_ok = FALSE;
             if(!single_packet) {
                 // try to read entire packet, this returs error more often then sequential reading of all blocks one by one
-                tmp_wb = (uint32)_Vcb;
+                tmp_wb = (uintptr_t)_Vcb;
                 RC = UDFTRead(_Vcb, p, Vcb->SparingBlockSize << Vcb->BlockSizeBits, lba0+i, &tmp_wb,
                               Flags | PH_READ_VERIFY_CACHE | PH_TMP_BUFFER | PH_VCB_IN_RETLEN);
             } else {
@@ -271,7 +271,7 @@ UDFTIOVerify(
                 // even if block is cached, we have to verify if it is readable
                 if(!packet_ok && !UDFVIsStored(Vcb, lba0+i)) {
 
-                    tmp_wb = (uint32)_Vcb;
+                    tmp_wb = (uintptr_t)_Vcb;
                     RC = UDFTRead(_Vcb, p, Vcb->BlockSize, lba0+i, &tmp_wb,
                                   Flags | PH_FORGET_VERIFIED | PH_READ_VERIFY_CACHE | PH_TMP_BUFFER | PH_VCB_IN_RETLEN);
                     if(!OS_SUCCESS(RC)) {
@@ -297,7 +297,7 @@ UDFTIOVerify(
 
             } else {
                 if(!UDFVIsStored(Vcb, lba0+i)) {
-                    tmp_wb = (uint32)_Vcb;
+                    tmp_wb = (uintptr_t)_Vcb;
                     RC = UDFTRead(_Vcb, p, Vcb->BlockSize, lba0+i, &tmp_wb,
                                   Flags | PH_FORGET_VERIFIED | PH_READ_VERIFY_CACHE | PH_TMP_BUFFER | PH_VCB_IN_RETLEN);
                 } else {
@@ -363,7 +363,7 @@ do_remap:
                         UDFPrint(("  remap status %x\n", RC));
                         if(OS_SUCCESS(RC)) {
                             // write to remapped area
-                            tmp_wb = (uint32)_Vcb;
+                            tmp_wb = (uintptr_t)_Vcb;
                             RC = UDFTWrite(_Vcb, tmp_buff, Vcb->SparingBlockSize << Vcb->BlockSizeBits, lba1, &tmp_wb,
                                           Flags | PH_FORGET_VERIFIED | PH_READ_VERIFY_CACHE | PH_TMP_BUFFER | PH_VCB_IN_RETLEN);
                             UDFPrint(("  write status %x\n", RC));

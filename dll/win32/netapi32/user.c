@@ -2456,7 +2456,7 @@ NetUserEnum(LPCWSTR servername,
 
     if (resume_handle != NULL && *resume_handle != 0)
     {
-        EnumContext = (PENUM_CONTEXT)*resume_handle;
+        EnumContext = (PENUM_CONTEXT)(ULONG_PTR)*resume_handle; // HACK!!!
     }
     else
     {

@@ -1838,12 +1838,12 @@ static inline void array_compute_and_size_conformance(
     if (fc == RPC_FC_C_CSTRING)
     {
       TRACE("string=%s\n", debugstr_a((const char *)pMemory));
-      pStubMsg->ActualCount = strlen((const char *)pMemory)+1;
+      pStubMsg->ActualCount = (ULONG)strlen((const char *)pMemory)+1;
     }
     else
     {
       TRACE("string=%s\n", debugstr_w((LPCWSTR)pMemory));
-      pStubMsg->ActualCount = strlenW((LPCWSTR)pMemory)+1;
+      pStubMsg->ActualCount = (ULONG)strlenW((LPCWSTR)pMemory)+1;
     }
 
     if (pFormat[1] == RPC_FC_STRING_SIZED)
@@ -1961,12 +1961,12 @@ static inline void array_compute_and_write_conformance(
     if (fc == RPC_FC_C_CSTRING)
     {
       TRACE("string=%s\n", debugstr_a((const char *)pMemory));
-      pStubMsg->ActualCount = strlen((const char *)pMemory)+1;
+      pStubMsg->ActualCount = (ULONG)strlen((const char *)pMemory)+1;
     }
     else
     {
       TRACE("string=%s\n", debugstr_w((LPCWSTR)pMemory));
-      pStubMsg->ActualCount = strlenW((LPCWSTR)pMemory)+1;
+      pStubMsg->ActualCount = (ULONG)strlenW((LPCWSTR)pMemory)+1;
     }
     if (pFormat[1] == RPC_FC_STRING_SIZED)
       pFormat = ComputeConformance(pStubMsg, pMemory, pFormat + 2, 0);

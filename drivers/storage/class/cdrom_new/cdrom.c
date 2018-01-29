@@ -1412,7 +1412,7 @@ CdRomStartIo(
         //
 
         ExInterlockedPushEntrySList(&(cdData->Mmc.DelayedIrps),
-                                    (PSINGLE_LIST_ENTRY)&(Irp->Tail.Overlay.DriverContext[0]),
+                                    (PSLIST_ENTRY)&(Irp->Tail.Overlay.DriverContext[0]),
                                     &(cdData->Mmc.DelayedLock));
         
         queueDepth = ExQueryDepthSList(&(cdData->Mmc.DelayedIrps));

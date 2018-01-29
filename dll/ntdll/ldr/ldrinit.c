@@ -465,8 +465,8 @@ LdrpInitSecurityCookie(PLDR_DATA_TABLE_ENTRY LdrEntry)
             NtQueryPerformanceCounter(&Counter, NULL);
 
             NewCookie = Counter.LowPart ^ Counter.HighPart;
-            NewCookie ^= (ULONG_PTR)NtCurrentTeb()->ClientId.UniqueProcess;
-            NewCookie ^= (ULONG_PTR)NtCurrentTeb()->ClientId.UniqueThread;
+            NewCookie ^= HandleToUlong(NtCurrentTeb()->ClientId.UniqueProcess);
+            NewCookie ^= HandleToUlong(NtCurrentTeb()->ClientId.UniqueThread);
 
             /* Loop like it's done in KeQueryTickCount(). We don't want to call it directly. */
             while (SharedUserData->SystemTime.High1Time != SharedUserData->SystemTime.High2Time)

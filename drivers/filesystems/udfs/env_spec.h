@@ -149,7 +149,7 @@ NTSTATUS NTAPI UDFSyncCompletionRoutine2(IN PDEVICE_OBJECT DeviceObject,
 
 #define OSGetCurrentThread()     PsGetCurrentThread()
 
-#define GetCurrentPID()   ((ULONG)PsGetCurrentProcessId())
+#define GetCurrentPID()   HandleToUlong(PsGetCurrentProcessId()
 
 
 #endif  // _UDF_ENV_SPEC_H_

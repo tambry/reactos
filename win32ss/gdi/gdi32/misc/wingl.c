@@ -85,19 +85,19 @@ static BOOL OpenGLEnable(void)
     }
 
 
-    if (!OpenGLInitFunction("wglChoosePixelFormat", &glChoosePixelFormat))
+    if (!OpenGLInitFunction("wglChoosePixelFormat", (FARPROC*)&glChoosePixelFormat))
         Ret = FALSE;
 
-    if (!OpenGLInitFunction("wglSetPixelFormat", &glSetPixelFormat))
+    if (!OpenGLInitFunction("wglSetPixelFormat", (FARPROC*)&glSetPixelFormat))
         Ret = FALSE;
 
-    if (!OpenGLInitFunction("wglSwapBuffers", &glSwapBuffers))
+    if (!OpenGLInitFunction("wglSwapBuffers", (FARPROC*)&glSwapBuffers))
         Ret = FALSE;
 
-    if (!OpenGLInitFunction("wglDescribePixelFormat", &glDescribePixelFormat))
+    if (!OpenGLInitFunction("wglDescribePixelFormat", (FARPROC*)&glDescribePixelFormat))
         Ret = FALSE;
 
-    if (!OpenGLInitFunction("wglGetPixelFormat", &glGetPixelFormat))
+    if (!OpenGLInitFunction("wglGetPixelFormat", (FARPROC*)&glGetPixelFormat))
         Ret = FALSE;
 
     return Ret;

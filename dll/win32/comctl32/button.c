@@ -1067,7 +1067,7 @@ static LRESULT CALLBACK BUTTON_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 #ifdef __REACTOS__
     /* Fix for core CORE-6024 */
     if (infoPtr->state & BUTTON_BMCLICK)
-       break;
+           break;
     infoPtr->state |= BUTTON_BMCLICK;
 #endif
 	SendMessageW( hWnd, WM_LBUTTONDOWN, 0, 0 );
@@ -1126,9 +1126,9 @@ static LRESULT CALLBACK BUTTON_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 
         if ((state ^ new_state) & BST_PUSHED)
         {
-            if (wParam)
+        if (wParam)
                 state |= BST_PUSHED;
-            else
+        else
                 state &= ~BST_PUSHED;
 
             if (btn_type == BS_USERBUTTON)
@@ -1141,7 +1141,7 @@ static LRESULT CALLBACK BUTTON_WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, L
 
 #ifdef __REACTOS__
     case WM_UPDATEUISTATE:
-        DefWindowProcW(hWnd, uMsg, wParam, lParam);
+            DefWindowProcW(hWnd, uMsg, wParam, lParam);
 
         if (button_update_uistate(infoPtr))
             paint_button( infoPtr, btn_type, ODA_DRAWENTIRE );
@@ -1630,11 +1630,11 @@ static void CB_Paint( const BUTTON_INFO *infoPtr, HDC hDC, UINT action )
     /* ... and focus */
     if (action == ODA_FOCUS || (state & BST_FOCUS))
     {
-	rtext.left--;
-	rtext.right++;
-	IntersectRect(&rtext, &rtext, &client);
-	DrawFocusRect( hDC, &rtext );
-    }
+            rtext.left--;
+            rtext.right++;
+            IntersectRect(&rtext, &rtext, &client);
+            DrawFocusRect( hDC, &rtext );
+        }
     SelectClipRgn( hDC, hrgn );
     if (hrgn) DeleteObject( hrgn );
 }
@@ -1739,7 +1739,7 @@ static void UB_Paint( const BUTTON_INFO *infoPtr, HDC hDC, UINT action )
 
     FillRect( hDC, &rc, hBrush );
     if (action == ODA_FOCUS || (state & BST_FOCUS))
-        DrawFocusRect( hDC, &rc );
+            DrawFocusRect( hDC, &rc );
 
     switch (action)
     {
@@ -2115,9 +2115,9 @@ void BUTTON_Register(void)
     WNDCLASSW wndClass;
 
     memset(&wndClass, 0, sizeof(wndClass));
-    wndClass.style = CS_GLOBALCLASS | CS_DBLCLKS | CS_VREDRAW | CS_HREDRAW | CS_PARENTDC;
+    wndClass.style         = CS_GLOBALCLASS | CS_DBLCLKS | CS_VREDRAW | CS_HREDRAW | CS_PARENTDC;
     wndClass.lpfnWndProc = BUTTON_WindowProc;
-    wndClass.cbClsExtra = 0;
+    wndClass.cbClsExtra    = 0;
     wndClass.cbWndExtra = sizeof(BUTTON_INFO *);
     wndClass.hCursor = LoadCursorW(0, (LPWSTR)IDC_ARROW);
     wndClass.hbrBackground = NULL;

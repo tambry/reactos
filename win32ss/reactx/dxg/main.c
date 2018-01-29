@@ -38,9 +38,9 @@ DxDdStartupDxGraphics (ULONG SizeEngDrv,
                        PULONG DirectDrawContext,
                        PEPROCESS Proc )
 {
-
+#if 0 // JESUS FUCKING CHRIST! This is complete bogus!
     PDRVFN drv_func;
-    ULONG peng_funcs;
+    PULONG peng_funcs;
     PULONG peng_func;
 
     UINT i;
@@ -65,7 +65,7 @@ DxDdStartupDxGraphics (ULONG SizeEngDrv,
     pDxgDrv->pdrvfn = gaDxgFuncs;
 
     /* check how many driver functions and fail if the value does not match */
-    if (pDxEngDrv->c !=  DXENG_INDEX_DxEngLoadImage + 1)
+    if (pDxEngDrv->c != DXENG_INDEX_DxEngLoadImage + 1)
     {
         return STATUS_INTERNAL_ERROR;
     }
@@ -75,7 +75,7 @@ DxDdStartupDxGraphics (ULONG SizeEngDrv,
      * and if it really are exported
      */
 
-    peng_funcs = (ULONG)&gpEngFuncs;
+    peng_funcs = (PULONG)&gpEngFuncs;
 
     for (i=1 ; i < DXENG_INDEX_DxEngLoadImage + 1; i++)
     {
@@ -86,7 +86,7 @@ DxDdStartupDxGraphics (ULONG SizeEngDrv,
         {
             return STATUS_INTERNAL_ERROR;
         }
-        peng_func = (PULONG)(peng_funcs+(i * sizeof(ULONG)));
+        peng_func = peng_funcs[i];
         *peng_func = (ULONG)drv_func->pfn;
     }
 
@@ -111,7 +111,7 @@ DxDdStartupDxGraphics (ULONG SizeEngDrv,
         EngDeleteSemaphore(ghsemDummyPage);
         ghsemDummyPage = 0;
     }
-
+#endif
     return STATUS_NO_MEMORY;
 }
 
