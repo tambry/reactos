@@ -34,6 +34,9 @@ extern void func_NtWriteFile(void);
 #endif // _RTL_TEST
 extern void func_RtlAllocateHeap(void);
 extern void func_RtlBitmap(void);
+#ifdef _M_AMD64
+extern void func_RtlCaptureContext(void);
+#endif
 extern void func_RtlCopyMappedMemory(void);
 extern void func_RtlDeleteAce(void);
 extern void func_RtlDetermineDosPathNameType(void);
@@ -96,6 +99,9 @@ const struct test winetest_testlist[] =
 #endif // _RTL_TEST
     { "RtlAllocateHeap",                func_RtlAllocateHeap },
     { "RtlBitmapApi",                   func_RtlBitmap },
+#ifdef _M_AMD64
+    { "RtlCaptureContext",              func_RtlCaptureContext },
+#endif
     { "RtlCopyMappedMemory",            func_RtlCopyMappedMemory },
     { "RtlDeleteAce",                   func_RtlDeleteAce },
     { "RtlDetermineDosPathNameType",    func_RtlDetermineDosPathNameType },
