@@ -36,6 +36,7 @@ extern void func_RtlAllocateHeap(void);
 extern void func_RtlBitmap(void);
 #ifdef _M_AMD64
 extern void func_RtlCaptureContext(void);
+extern void func_RtlVirtualUnwind(void);
 #endif
 extern void func_RtlCopyMappedMemory(void);
 extern void func_RtlDeleteAce(void);
@@ -101,6 +102,7 @@ const struct test winetest_testlist[] =
     { "RtlBitmapApi",                   func_RtlBitmap },
 #ifdef _M_AMD64
     { "RtlCaptureContext",              func_RtlCaptureContext },
+    { "RtlVirtualUnwind",               func_RtlVirtualUnwind },
 #endif
     { "RtlCopyMappedMemory",            func_RtlCopyMappedMemory },
     { "RtlDeleteAce",                   func_RtlDeleteAce },
