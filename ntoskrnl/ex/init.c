@@ -657,6 +657,30 @@ BOOLEAN
 NTAPI
 ExpInitSystemPhase1(VOID)
 {
+
+    __try
+    {
+        __try
+        {
+            __try
+            {
+                RtlRaiseStatus(STATUS_INVALID_PARAMETER);
+            }
+            __except (DbgPrint("ExceptionFilter 1\n"), 0)
+            {
+                DbgPrint("Target1\n");
+            }
+        }
+        __finally
+        {
+            DbgPrint("Finally\n");
+        }
+    }
+    __except (DbgPrint("ExceptionFilter 2\n"), 1)
+    {
+        DbgPrint("Target1\n");
+    }
+
     /* Initialize worker threads */
     ExpInitializeWorkerThreads();
 
