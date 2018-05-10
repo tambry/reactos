@@ -46,8 +46,12 @@ RtlPcToFileHeader(
     }
     else
     {
+#ifdef _M_AMD64
+        *BaseOfImage = NULL;
+#else
         /* We are in user land */
         *BaseOfImage = KiRosPcToUserFileHeader(PcValue, &LdrEntry);
+#endif
     }
 
     return *BaseOfImage;
