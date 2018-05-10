@@ -31,10 +31,36 @@ PUBLIC LdrInitializeThunk
 
 .ENDP
 
+EXTERN NtSetContextThread:PROC
+EXTERN RtlCaptureContext:PROC
+
 PUBLIC KiUserApcDispatcher
 .PROC KiUserApcDispatcher
     .endprolog
     /* We enter with a 16 byte aligned stack */
+    int 3
+    sub rsp, 200h
+
+    mov [rsp + CxSegSs], ss
+
+    lea rcx, [rsp]
+    call RtlCaptureContext
+
+    lea rax, [rsp + CxSegSs]
+    mov [rsp + CxDr0], rax
+
+    or qword ptr [rsp + CxDr7], 0F01h
+    lea rcx, [dostuff]
+    mov [rsp + CxRip], rcx
+
+    mov rcx, -2
+    lea rdx, [rsp]
+    call NtSetContextThread
+
+    nop
+dostuff:
+    mov ss, [rsp + CxSegSs]
+    int 3
 
     mov rcx, [rsp + CONTEXT_P1Home] /* NormalContext */
     mov rdx, [rsp + CONTEXT_P2Home] /* SystemArgument1 */
