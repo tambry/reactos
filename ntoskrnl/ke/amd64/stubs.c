@@ -409,4 +409,24 @@ NtVdmControl(IN ULONG ControlCode,
     return STATUS_NOT_IMPLEMENTED;
 }
 
+VOID
+RtlSetUnwindContext(
+    _In_ PCONTEXT Context,
+    _In_ DWORD64 TargetFrame);
 
+VOID
+KiSetTrapContextInternal(
+    _Out_ PKTRAP_FRAME TrapFrame,
+    _In_ PCONTEXT Context,
+    _In_ KPROCESSOR_MODE RequestorMode)
+{
+    /* Save the volatile register context in the trap frame */
+    KeContextToTrapFrame(Context,
+                         NULL,
+                         TrapFrame,
+                         Context->ContextFlags,
+                         RequestorMode);
+
+    /* Set the nonvolatiles on the stack, target frame is the trap frame */
+    RtlSetUnwindContext(Context, (ULONG64)TrapFrame);
+}
