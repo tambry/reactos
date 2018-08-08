@@ -10537,7 +10537,7 @@ DriverEntry(
 #ifndef USE_REACTOS_DDK
     NTSTATUS               status;
 #endif
-
+    __debugbreak();
     PCONFIGURATION_INFORMATION GlobalConfig = IoGetConfigurationInformation();
     BOOLEAN PrimaryClaimed   = FALSE;
     BOOLEAN SecondaryClaimed = FALSE;
