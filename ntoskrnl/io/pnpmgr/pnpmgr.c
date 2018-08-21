@@ -964,7 +964,7 @@ IopStartDevice(
     if (!NT_SUCCESS(Status))
         goto ByeBye;
 
-   if (DeviceNode->ServiceName.Buffer == NULL) __debugbreak();
+   //if (DeviceNode->ServiceName.Buffer == NULL) __debugbreak();
    RtlInitUnicodeString(&KeyName, L"ActiveService");
    ValueString = DeviceNode->ServiceName;
    if (!ValueString.Buffer)
