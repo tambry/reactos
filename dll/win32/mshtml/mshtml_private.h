@@ -686,7 +686,7 @@ typedef struct {
     HRESULT (*handle_event)(HTMLDOMNode*, enum eventid_t,nsIDOMEvent*,BOOL*);
     HRESULT (*get_attr_col)(HTMLDOMNode*,HTMLAttributeCollection**);
     event_target_t **(*get_event_target_ptr)(HTMLDOMNode*);
-    HRESULT (*fire_event)(HTMLDOMNode*,enum eventid_t,BOOL*);
+    HRESULT (*fire_event)(HTMLDOMNode*,DWORD,BOOL*);
     HRESULT (*put_disabled)(HTMLDOMNode*,VARIANT_BOOL);
     HRESULT (*get_disabled)(HTMLDOMNode*,VARIANT_BOOL*);
     HRESULT (*get_document)(HTMLDOMNode*,IDispatch**);
