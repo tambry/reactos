@@ -74,7 +74,7 @@ __cdecl
 DebugFunction(
     IN LPCSTR FormatStr, ...)
 {
-#if HID_DBG
+#if 1
     va_list args;
     char printbuffer[1024];
 
