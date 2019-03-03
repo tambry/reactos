@@ -1,4 +1,5 @@
 output-*
+boot/bootdata/bootcd/unattend.inf
 modules/optional
 modules/bootcd_extras
 modules/livecd_extras
