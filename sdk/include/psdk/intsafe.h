@@ -258,6 +258,11 @@ C_ASSERT(sizeof(UINT_PTR) == sizeof(ULONG_PTR));
 #define UInt32x32To64(a,b) ((unsigned __int64)(unsigned int)(a)*(unsigned __int64)(unsigned int)(b))
 #endif
 
+// 32-bit x 32-bit to 64-bit signed multiplication
+#ifndef Int32x32To64
+#define Int32x32To64(a,b) ((__int64)(int)(a)*(__int64)(int)(b))
+#endif
+
 /* Convert unsigned to signed or unsigned */
 #define DEFINE_SAFE_CONVERT_UTOX(_Name, _TypeFrom, _TypeTo) \
 _Must_inspect_result_ \
@@ -755,6 +760,21 @@ DEFINE_SAFE_MULT_U32(ULongMult, ULONG, ULongLongToULong)
 DEFINE_SAFE_MULT_U32(SizeTMult, size_t, ULongLongToSizeT)
 DEFINE_SAFE_MULT_U32(SIZETMult, SIZE_T, ULongLongToSIZET)
 #endif
+
+#define DEFINE_SAFE_MULT_S32(_Name, _Type, _Convert) \
+_Must_inspect_result_ \
+__forceinline \
+INTSAFE_RESULT \
+INTSAFE_NAME(_Name)( \
+    _In_ _Type Multiplicand, \
+    _In_ _Type Multiplier, \
+    _Out_ _Deref_out_range_(==, Multiplicand * Multiplier) _Type* pOutput) \
+{ \
+    LONGLONG Result = Int32x32To64(Multiplicand, Multiplier); \
+    return INTSAFE_NAME(_Convert)(Result, pOutput); \
+}
+
+DEFINE_SAFE_MULT_S32(IntMult, INT, LongLongToInt)
 
 #define DEFINE_SAFE_MULT_U16(_Name, _Type, _Convert) \
 _Must_inspect_result_ \
