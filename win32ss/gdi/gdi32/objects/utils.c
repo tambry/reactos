@@ -219,7 +219,7 @@ ConvertBitmapInfo(
 
     if (FollowedByData)
     {
-        DataSize = GdiGetBitmapBitsSize((PBITMAPINFO)BitmapInfo );
+        DataSize = GdiGetBitmapBitsSize(BitmapInfo);
     }
 
     /*
@@ -340,6 +340,148 @@ ConvertBitmapInfo(
     *BitmapInfoSize = Size;
 
     return NewBitmapInfo;
+}
+
+BITMAPINFO*
+WINAPI
+pbmiConvertInfo(
+	const BITMAPINFO* BmInfo,
+	UINT Usage,
+	UINT* BmInfoSize,
+	BOOL FollowedByData)
+{
+    DWORD Compression;
+    DWORD HeaderSize;
+    INT ColourTableEntrySize = 4;
+    BITMAPCOREINFO* CoreInfo = (BITMAPCOREINFO*)BmInfo;
+    BITMAPINFO* ConvertedInfo = (BITMAPINFO*)BmInfo;
+    UINT TableSize, TableEntries, TableEntriesCopy;
+    UINT DataSize = 0;
+    RGBQUAD* ConvertedColours;
+    RGBTRIPLE* CoreColours;
+    void* Data;
+
+    if (!BmInfo)
+        return NULL;
+
+    HeaderSize = BmInfo->bmiHeader.biSize;
+
+    if (HeaderSize == sizeof(BITMAPCOREHEADER))
+    {
+        Compression = BI_RLE8;
+    }
+    else
+    {
+        if (HeaderSize < sizeof(BITMAPINFOHEADER) || HeaderSize > 0xF8)
+        {
+            return NULL;
+        }
+
+        Compression = BmInfo->bmiHeader.biCompression;
+    }
+    
+    if (!CalculateColorTableSize(&BmInfo->bmiHeader, &Usage, &TableEntries))
+    {
+        return NULL;
+    }
+
+    if (Usage == DIB_PAL_COLORS)
+    {
+        ColourTableEntrySize = 2;
+    }
+    else if (Usage == DIB_PAL_INDICES)
+    {
+        ColourTableEntrySize = 0;
+    }
+
+    if (FollowedByData)
+    {
+        DataSize = GdiGetBitmapBitsSize(BmInfo);
+    }
+
+    TableSize = ColourTableEntrySize * TableEntries;
+
+    if (Compression == BI_RGB)
+    {
+        goto SetSize;
+    }
+
+    HeaderSize = sizeof(BITMAPINFOHEADER);
+    
+    if (BmInfo->bmiHeader.biSize == sizeof(BITMAPCOREHEADER))
+    {
+        ConvertedInfo = RtlAllocateHeap(RtlGetProcessHeap(), 0, TableSize + DataSize + HeaderSize);
+
+        if (!ConvertedInfo)
+        {
+            return NULL;
+        }
+
+        CopyCoreToInfoHeader(ConvertedInfo, CoreInfo);
+
+        ConvertedColours = ConvertedInfo->bmiColors;
+        CoreColours = CoreInfo->bmciColors;
+
+        if (Usage == DIB_PAL_COLORS)
+        {
+            RtlCopyMemory(ConvertedColours, CoreColours, TableSize);
+
+            if (!FollowedByData)
+                goto SetSize;
+
+            Data = CoreInfo->bmciColors + TableSize;
+        }
+        else
+        {
+            if (BmInfo)
+            {
+                TableEntriesCopy = TableEntries;
+                
+                do
+                {
+                    ConvertedColours->rgbRed = CoreColours->rgbtRed;
+                    ConvertedColours->rgbGreen = CoreColours->rgbtGreen;
+                    ConvertedColours->rgbBlue = CoreColours->rgbtBlue;
+                    ConvertedColours->rgbReserved = 0;
+                    ++ConvertedColours;
+                    ++CoreColours;
+                }
+                while (--TableEntriesCopy);
+            }
+
+            if (!FollowedByData)
+                goto SetSize;
+
+            Data = CoreInfo + 2 * (TableEntries + 4) + TableEntries;
+        }
+
+        RtlCopyMemory(ConvertedInfo->bmiColors + TableSize, Data, DataSize);
+    }
+
+SetSize:
+    *BmInfoSize = (HeaderSize + TableSize + DataSize + 3) & 0xFFFFFFFC;
+
+    return ConvertedInfo;
+}
+
+BITMAPINFO*
+WINAPI
+CopyCoreToInfoHeader(
+	BITMAPINFO* BmInfo,
+	BITMAPCOREINFO* CoreInfo)
+{
+    BmInfo->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    BmInfo->bmiHeader.biWidth = CoreInfo->bmciHeader.bcWidth;
+    BmInfo->bmiHeader.biHeight = CoreInfo->bmciHeader.bcHeight;
+    BmInfo->bmiHeader.biPlanes = CoreInfo->bmciHeader.bcPlanes;
+    BmInfo->bmiHeader.biBitCount = CoreInfo->bmciHeader.bcBitCount;
+    BmInfo->bmiHeader.biCompression = 0;
+    BmInfo->bmiHeader.biSizeImage = 0;
+    BmInfo->bmiHeader.biXPelsPerMeter = 0;
+    BmInfo->bmiHeader.biYPelsPerMeter = 0;
+    BmInfo->bmiHeader.biClrUsed = 0;
+    BmInfo->bmiHeader.biClrImportant = 0;
+    return BmInfo;
 }
 
 VOID

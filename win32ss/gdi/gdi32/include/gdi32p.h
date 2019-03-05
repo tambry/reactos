@@ -273,6 +273,20 @@ ConvertBitmapInfo(
     BOOL FollowedByData
 );
 
+BITMAPINFO*
+WINAPI
+pbmiConvertInfo(
+	const BITMAPINFO* BmInfo,
+	UINT Usage,
+	UINT* BmInfoSize,
+	BOOL FollowedByData);
+
+BITMAPINFO*
+WINAPI
+CopyCoreToInfoHeader(
+	BITMAPINFO* BmInfo,
+	BITMAPCOREINFO* CoreInfo);
+
 DWORD
 WINAPI
 GetAndSetDCDWord(
@@ -352,7 +366,7 @@ DWORD WINAPI GdiGetCodePage(HDC);
 
 int
 WINAPI
-GdiGetBitmapBitsSize(BITMAPINFO *lpbmi);
+GdiGetBitmapBitsSize(const BITMAPINFO* lpbmi);
 
 VOID GdiSAPCallback(PLDC pldc);
 HGDIOBJ FASTCALL hGetPEBHandle(HANDLECACHETYPE,COLORREF);

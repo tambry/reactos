@@ -37,6 +37,9 @@ extern "C" {
 #define BI_BITFIELDS 3
 #define BI_JPEG 4
 #define BI_PNG 5
+#define BI_CMYK 11
+#define BI_CMYKRLE4 12
+#define BI_CMYKRLE8 13
 #define LF_FACESIZE	32
 #define LF_FULLFACESIZE	64
 #define CA_NEGATIVE	1

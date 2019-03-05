@@ -187,34 +187,30 @@ DIB_GetBitmapInfo(
 int
 WINAPI
 GdiGetBitmapBitsSize(
-    BITMAPINFO *lpbmi)
+    const BITMAPINFO* BmInfo)
 {
-    UINT Ret;
+    const BITMAPINFOHEADER* Header;
+    DWORD Compression;
 
-    if (!lpbmi)
+    if (!BmInfo)
         return 0;
 
-    if (lpbmi->bmiHeader.biSize == sizeof(BITMAPCOREHEADER))
+    if (BmInfo->bmiHeader.biSize == sizeof(BITMAPCOREHEADER))
     {
-        PBITMAPCOREHEADER Core = (PBITMAPCOREHEADER) lpbmi;
-        Ret =
-        WIDTH_BYTES_ALIGN32(Core->bcWidth * Core->bcPlanes,
-                Core->bcBitCount) * Core->bcHeight;
+        BITMAPCOREHEADER* Core = (BITMAPCOREHEADER*)BmInfo;
+        return WIDTH_BYTES_ALIGN32(Core->bcWidth * Core->bcPlanes, Core->bcBitCount) * Core->bcHeight;
     }
-    else /* assume BITMAPINFOHEADER */
+
+    // Assume BITMAPINFOHEADER
+    Header = &BmInfo->bmiHeader;
+    Compression = Header->biCompression;
+
+    if (Compression && Compression != BI_BITFIELDS && Compression != 0xA)
     {
-        if (!(lpbmi->bmiHeader.biCompression) || (lpbmi->bmiHeader.biCompression == BI_BITFIELDS))
-        {
-            Ret = WIDTH_BYTES_ALIGN32(
-                    lpbmi->bmiHeader.biWidth * lpbmi->bmiHeader.biPlanes,
-                    lpbmi->bmiHeader.biBitCount) * abs(lpbmi->bmiHeader.biHeight);
-        }
-        else
-        {
-            Ret = lpbmi->bmiHeader.biSizeImage;
-        }
+        return Header->biSizeImage;
     }
-    return Ret;
+
+    return WIDTH_BYTES_ALIGN32(Header->biWidth * Header->biPlanes, Header->biBitCount) * abs(Header->biHeight);
 }
 
 /*
@@ -431,131 +427,107 @@ CreateDIBitmap(
     const BITMAPINFO* pbmi,
     UINT iUsage)
 {
-    LONG Width, Height, Compression, DibSize;
-    WORD Planes, BitsPerPixel;
-    UINT ContentSize = 0;
-    HBITMAP Bitmap = NULL;
-    BITMAPINFO* BmInfoConverted;
+    LONG Width, Height, Compression;
+    HBITMAP Bitmap = INVALID_HANDLE_VALUE;
+    PBITMAPINFO BmInfoConverted;
     UINT BmInfoSize;
+    UINT ContentSize = 0;
+    const BITMAPINFOHEADER* Header = &pbmi->bmiHeader;
+    PVOID AlignedBits = NULL;
 
     // Convert the BITMAPINFO if it is a COREINFO
-    BmInfoConverted = ConvertBitmapInfo(pbmi, iUsage, &BmInfoSize, FALSE);
+    BmInfoConverted = pbmiConvertInfo(pbmi, iUsage, &BmInfoSize, FALSE);
 
-    // Check for CBM_CREATDIB
     if (flInit & CBM_CREATDIB)
     {
-        if (BmInfoSize == 0)
+        if (BmInfoSize)
         {
-            goto Exit;
-        }
-        else if (flInit & CBM_INIT)
-        {
-            if (pjBits == NULL)
+            if (!(flInit & CBM_INIT))
             {
-                goto Exit;
+                pjBits = NULL;
             }
+            else if (pjBits)
+            {
+                ContentSize = GdiGetBitmapBitsSize(BmInfoConverted);
+            }
+
+            goto HeaderChecks;
+        }
+
+        Bitmap = NULL;
+        goto HeaderChecks;
+    }
+
+    Header = pbmih;
+
+    if (!(flInit & CBM_INIT))
+    {
+        pjBits = NULL;
+        goto HeaderChecks;
+    }
+
+    if (pjBits)
+    {
+        if (BmInfoSize)
+        {
+            ContentSize = GdiGetBitmapBitsSize(BmInfoConverted);
         }
         else
         {
-            pjBits = NULL;
+            Bitmap = NULL;
         }
-
-        // CBM_CREATDIB needs pbmi.
-        if (BmInfoConverted == NULL)
-        {
-            DPRINT1("CBM_CREATDIB needs a BITMAPINFO!\n");
-            goto Exit;
-        }
-
-        // It only works with PAL or RGB
-        if (iUsage > DIB_PAL_COLORS)
-        {
-            DPRINT1("Invalid iUsage: %lu\n", iUsage);
-            GdiSetLastError(ERROR_INVALID_PARAMETER);
-            goto Exit;
-        }
-
-        // Use the header from the data
-        pbmih = &pbmi->bmiHeader;
     }
     else
     {
-        if (flInit & CBM_INIT)
+        flInit &= ~CBM_INIT;
+    }
+
+HeaderChecks:
+    if (BmInfoConverted && BmInfoConverted->bmiHeader.biSize >= sizeof(BITMAPINFOHEADER))
+    {
+        Compression = BmInfoConverted->bmiHeader.biCompression;
+
+        if (Compression == BI_JPEG || Compression == BI_PNG)
         {
-            if (pjBits != NULL)
-            {
-                if (BmInfoSize == 0)
-                {
-                    goto Exit;
-                }
-            }
-            else
-            {
-                flInit &= ~CBM_INIT;
-            }
+            Bitmap = NULL;
         }
     }
 
-    // Header is required
-    if (!pbmih)
+    if (Header)
     {
-        DPRINT1("Header is NULL\n");
-        GdiSetLastError(ERROR_INVALID_PARAMETER);
-        goto Exit;
+        if (Header->biSize < sizeof(BITMAPINFOHEADER))
+        {
+            Width = ((BITMAPCOREHEADER*)Header)->bcWidth;
+            Height = ((BITMAPCOREHEADER*)Header)->bcHeight;
+        }
+        else
+        {
+            Width = Header->biWidth;
+            Height = Header->biHeight;
+        }
+
+        if (!Width || !Height)
+        {
+            Bitmap = GetStockObject(DEFAULT_BITMAP);
+        }
     }
 
-    // Get the bitmap format and dimensions
-    if (DIB_GetBitmapInfo(pbmih, &Width, &Height, &Planes, &BitsPerPixel, &Compression, &DibSize) == -1)
+    if (Bitmap == INVALID_HANDLE_VALUE)
     {
-        DPRINT1("DIB_GetBitmapInfo failed!\n");
-        GdiSetLastError(ERROR_INVALID_PARAMETER);
-        goto Exit;
-    }
+        // Align pjBits if badly aligned
+        if ((uintptr_t)pjBits & 3)
+        {
+            AlignedBits = RtlAllocateHeap(RtlGetProcessHeap(), 0, ContentSize);
 
-    // Check if the Compr is incompatible
-    if ((Compression == BI_JPEG) || (Compression == BI_PNG) || (Compression == BI_BITFIELDS))
-    {
-        DPRINT1("Invalid compression: %lu!\n", Compression);
-        goto Exit;
-    }
+            if (AlignedBits)
+            {
+                RtlCopyMemory(AlignedBits, pjBits, ContentSize);
+                pjBits = AlignedBits;
+            }
+        }
 
-    // Only DIB_RGB_COLORS (0), DIB_PAL_COLORS (1) and 2 are valid.
-    if (iUsage > DIB_PAL_COLORS + 1)
-    {
-        DPRINT1("Invalid compression: %lu!\n", Compression);
-        GdiSetLastError(ERROR_INVALID_PARAMETER);
-        goto Exit;
-    }
+        // TODO: ICM support
 
-    // If some pjBits are given, only DIB_PAL_COLORS and DIB_RGB_COLORS are valid
-    if (pjBits && (iUsage > DIB_PAL_COLORS))
-    {
-        DPRINT1("Invalid iUsage: %lu\n", iUsage);
-        GdiSetLastError(ERROR_INVALID_PARAMETER);
-        goto Exit;
-    }
-
-    // Negative width is not allowed
-    if (Width < 0)
-    {
-        DPRINT1("Negative width: %li\n", Width);
-        goto Exit;
-    }
-
-    // Top-down DIBs have a negative height.
-    Height = abs(Height);
-
-    ContentSize = GdiGetBitmapBitsSize(BmInfoConverted);
-
-    DPRINT("pBMI %p, Size bpp %u, dibsize %d, Conv %u, BSS %u\n",
-           pbmi, BitsPerPixel, DibSize, BmInfoSize, ContentSize);
-
-    if (!Width || !Height)
-    {
-        Bitmap = GetStockObject(DEFAULT_BITMAP);
-    }
-    else
-    {
         Bitmap = NtGdiCreateDIBitmapInternal(hdc,
                                              Width,
                                              Height,
@@ -566,9 +538,13 @@ CreateDIBitmap(
                                              BmInfoSize,
                                              ContentSize,
                                              0, 0);
+
+        if (AlignedBits)
+        {
+            RtlFreeHeap(RtlGetProcessHeap(), 0, AlignedBits);
+        }
     }
 
-Exit:
     // Cleanup converted BITMAPINFO
     if (BmInfoConverted && BmInfoConverted != pbmi)
     {

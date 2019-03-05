@@ -104,7 +104,7 @@ Test_CreateDIBitmap_Params(void)
     HBITMAP hbmp;
     HDC hdc;
     BITMAPINFO bmi =
-        {{sizeof(BITMAPINFOHEADER), 4, 4, 1, 8, BI_RGB, 0, 1, 1, 1, 0}, {{0,0,0,0}}};
+        {{sizeof(BITMAPINFOHEADER), 4, 4, 1, 8, BI_RGB, 0, 1, 1, 1, 0}, {{0, 0, 0, 0}}};
     BITMAPINFO bmiBroken =
         {{0, -2, -4, 55, 42, 21, 0, 1, 1, 1, 0}, {{0,0,0,0}}};
     BYTE ajBits[10];
@@ -419,7 +419,8 @@ Test_CreateDIBitmap_CBM_CREATDIB(void)
     HBITMAP hbmp, hbmpOld;
     HDC hdc;
     BITMAPINFO bmi =
-        {{sizeof(BITMAPINFOHEADER), 4, 4, 1, 8, BI_RGB, 0, 1, 1, 1, 0}, {{0,1,2,3}}};
+        {{sizeof(BITMAPINFOHEADER), 4, 4, 1, 8, BI_RGB, 0, 1, 1, 1, 0}, {{0, 1, 2, 3}}};
+    BITMAPCOREINFO bmiCore = {{sizeof(BITMAPCOREHEADER), 4, 4, 1, 8}, {{1, 2, 3}}};
     BYTE ajBits[10] = {0,1,2,3,4,5,6,7,8,9};
     BITMAP bitmap;
     struct
@@ -524,6 +525,15 @@ Test_CreateDIBitmap_CBM_CREATDIB(void)
     bmi.bmiHeader.biHeight = 0;
     hbmp = CreateDIBitmap(hdc, &bmi.bmiHeader, CBM_CREATDIB, ajBits, &bmi, DIB_PAL_COLORS);
     ok(hbmp == GetStockObject(21), "CreateDIBitmap didn't return the default bitmap.\n");
+    // For the core header too
+    bmiCore.bmciHeader.bcWidth = 0;
+    bmiCore.bmciHeader.bcHeight = 4;
+    hbmp = CreateDIBitmap(hdc, (BITMAPINFOHEADER*)&bmiCore.bmciHeader, CBM_CREATDIB, ajBits, (BITMAPINFO*)&bmiCore, DIB_PAL_COLORS);
+    ok(hbmp == GetStockObject(21), "CreateDIBitmap didn't return the default bitmap for core header.\n");
+    bmiCore.bmciHeader.bcWidth = 23;
+    bmiCore.bmciHeader.bcHeight = 0;
+    hbmp = CreateDIBitmap(hdc, (BITMAPINFOHEADER*)&bmiCore.bmciHeader, CBM_CREATDIB, ajBits, (BITMAPINFO*)&bmiCore, DIB_PAL_COLORS);
+    ok(hbmp == GetStockObject(21), "CreateDIBitmap didn't return the default bitmap for core header.\n");
 
     DeleteDC(hdc);
 }

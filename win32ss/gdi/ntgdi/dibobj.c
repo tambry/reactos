@@ -6,6 +6,7 @@
  * PROGRAMMER:
  */
 
+#include <intsafe.h>
 #include <win32k.h>
 
 #define NDEBUG
@@ -35,6 +36,34 @@ static const RGBQUAD DefLogPaletteQuads[20] =   /* Copy of Default Logical Palet
     { 0xff, 0xff, 0x00, 0x00 },
     { 0xff, 0xff, 0xff, 0x00 }
 };
+
+static BOOL NTAPI bCaptureBitmapInfo(const BITMAPINFO* BmInfo, DWORD Usage, UINT Size, BITMAPINFO** Destination)
+{
+    DWORD HeaderSize;
+
+    if (Size >= 4 && BmInfo)
+    {
+        HeaderSize = BmInfo->bmiHeader.biSize;
+
+        if (HeaderSize < sizeof(BITMAPINFOHEADER) || Size < HeaderSize || Size != GreGetBitmapSize(BmInfo, Usage))
+        {
+            DPRINT1("bCaptureBitmapInfo sanity check failure. Size=%u, HeaderSize=%u, BitmapSize=%u\n", Size, HeaderSize, GreGetBitmapSize(BmInfo, Usage));
+            return FALSE;
+        }
+
+        // TODO: Use HeavyAllocPool instead
+        *Destination = ExAllocatePoolWithTag(0, Size, GDITAG_TEMP);
+
+        if (*Destination)
+        {
+            ProbeForRead(BmInfo, Size, 1);
+            RtlCopyMemory(*Destination, BmInfo, Size);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
 
 PPALETTE
 NTAPI
@@ -1467,63 +1496,56 @@ NtGdiCreateDIBitmapInternal(
     IN FLONG Unused,
     IN HANDLE XForm)
 {
-    NTSTATUS Status = STATUS_SUCCESS;
-    PBYTE SafeInitData = NULL;
-    HBITMAP hbmResult = NULL;
+    HBITMAP Bitmap = (HBITMAP)ERROR_INVALID_HANDLE;
+    HANDLE SecureHandle = NULL;
+    BITMAPINFO* SafeBmInfo = NULL;
 
-    if (InitData == NULL)
+    if (BmInfo && BmInfoSize)
     {
-        InitFlags &= ~CBM_INIT;
+        _SEH2_TRY
+        {
+            if (!bCaptureBitmapInfo(BmInfo, Usage, BmInfoSize, &SafeBmInfo))
+            {
+                return NULL;
+            }
+
+            if (InitData && ContentSize)
+            {
+                ProbeForRead(InitData, ContentSize, 4);
+
+                SecureHandle = MmSecureVirtualMemory(InitData, ContentSize, PAGE_READONLY);
+                if (!SecureHandle)
+                {
+                    Bitmap = NULL;
+                }
+            }
+        }
+        _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+        {
+            Bitmap = NULL;
+        }
+        _SEH2_END;
     }
 
-    if(InitData && (InitFlags & CBM_INIT))
+    if (Bitmap == (HBITMAP)ERROR_INVALID_HANDLE)
     {
-        if (ContentSize == 0) return NULL;
-        SafeInitData = ExAllocatePoolWithTag(PagedPool, ContentSize, TAG_DIB);
-        if(!SafeInitData)
+        if (InitFlags & CBM_CREATDIB)
         {
-            DPRINT1("Failed to allocate %lu bytes\n", ContentSize);
-            EngSetLastError(ERROR_NOT_ENOUGH_MEMORY);
-            return NULL;
+            Bitmap = GreCreateDIBitmapReal(hDC, InitFlags, InitData, SafeBmInfo, Usage, BmInfoSize, ContentSize, 0, 0, 0, 0, 0, 0);
+        }
+        else
+        {
+            Bitmap = GreCreateDIBitmapComp(hDC, Width, Height, InitFlags, InitData, SafeBmInfo, Usage, BmInfoSize, ContentSize, 0, XForm);
         }
     }
 
-    _SEH2_TRY
-    {
-        if(BmInfo) ProbeForRead(BmInfo, BmInfoSize, 1);
-        if(InitData && (InitFlags & CBM_INIT))
-        {
-            ProbeForRead(InitData, ContentSize, 1);
-            RtlCopyMemory(SafeInitData, InitData, ContentSize);
-        }
-    }
-    _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
-    {
-        Status = _SEH2_GetExceptionCode();
-    }
-    _SEH2_END
+    if (SafeBmInfo)
+        ExFreePoolWithTag(SafeBmInfo, 0);
 
-    if(!NT_SUCCESS(Status))
-    {
-        DPRINT1("Got an exception! InitData=%p\n", InitData);
-        SetLastNtError(Status);
-        goto Cleanup;
-    }
+    if (SecureHandle)
+        MmUnsecureVirtualMemory(SecureHandle);
 
-    hbmResult = GreCreateDIBitmapInternal(hDC,
-                                          Width,
-                                          Height,
-                                          InitFlags,
-                                          SafeInitData,
-                                          (BITMAPINFO*)BmInfo,
-                                          Usage,
-                                          0,
-                                          ContentSize,
-                                          XForm);
-
-Cleanup:
-    if (SafeInitData) ExFreePoolWithTag(SafeInitData, TAG_DIB);
-    return hbmResult;
+    return Bitmap;
 }
 
 HBITMAP

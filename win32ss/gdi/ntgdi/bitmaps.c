@@ -7,6 +7,7 @@
  *                   Katayama Hirofumi MZ <katayama.hirofumi.mz@gmail.com>
  */
 
+#include <intsafe.h>
 #include <win32k.h>
 
 #define NDEBUG
@@ -185,6 +186,163 @@ GreCreateBitmap(
                              0, /* Auto size */
                              pvBits,
                              DDB_SURFACE /* DDB */);
+}
+
+HBITMAP
+NTAPI
+GreCreateCompatibleBitmap(
+    HDC hDC,
+    INT Width,
+    INT Height)
+{
+    INT Pixels;
+    DC* DC;
+    SURFACE* Surface;
+
+    if (Height & 0x1000000)
+    {
+        Height &= 0xFEFFFFFF;
+    }
+
+    if (Width <= 0 || Height <= 0 || RtlIntMult(Width, Height, &Pixels) != S_OK || (UINT)Pixels > 0x3FFFFFFF)
+    {
+        EngSetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    if (!hDC)
+        return GreCreateBitmap(Width, Height, 1, 1, NULL);
+
+    DC = DC_LockDc(hDC);
+
+    if (!DC)
+        return NULL;
+
+    Surface = DC->dclevel.pSurface;
+    if (!Surface)
+    {
+        DPRINT1("Default surface unimplemented");
+        return NULL;
+    }
+
+    if (DC->dctype == DCTYPE_MEMORY)
+    {
+        
+    }
+
+    DC_UnlockDc(DC);
+
+    return NULL;
+}
+
+HBITMAP
+NTAPI
+GreCreateDIBitmapReal(
+    HDC hDC,
+    DWORD InitFlags,
+    VOID* InitData,
+    const BITMAPINFO* BmInfo,
+    DWORD Usage,
+    UINT BmInfoSize,
+    UINT ContentSize,
+    void* Unknown1,
+    UINT Unknown2,
+    void* Unknown3,
+    char UnknownFlags,
+    UINT Unknown4,
+    INT Unknown5)
+{
+    DWORD Compression;
+    LONG Height;
+
+    if (!BmInfo || BmInfoSize < sizeof(BITMAPINFOHEADER) || BmInfoSize < BmInfo->bmiHeader.biSize)
+    {
+        EngSetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    Compression = BmInfo->bmiHeader.biCompression;
+
+    if (Compression == BI_JPEG || Compression == BI_PNG)
+    {
+        EngSetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    Height = BmInfo->bmiHeader.biHeight;
+
+    if (BmInfo->bmiHeader.biWidth <= 0 || Height == 0)
+    {
+        EngSetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    Height = abs(Height);
+
+    //DPRINT1("GreCreateDIBitmapReal(%p, InitFlags=%u, InitData=%p, BmInfo=%p, Usage=%u, BmInfoSize=%u, ContentSize=%u)\n", hDC, InitFlags, InitData, BmInfo, Usage, BmInfoSize, ContentSize);
+    return NtGdiCreateCompatibleBitmap(hDC, BmInfo->bmiHeader.biWidth, Height);
+}
+
+HBITMAP
+NTAPI
+GreCreateDIBitmapComp(
+    HDC hDC,
+    INT Width,
+    INT Height,
+    DWORD InitFlags,
+    OPTIONAL VOID* InitData,
+    OPTIONAL const BITMAPINFO* BmInfo,
+    DWORD Usage,
+    UINT BmInfoSize,
+    UINT ContentSize,
+    DWORD Unused,
+    HANDLE XForm)
+{
+    DWORD Compression = BmInfo ? BmInfo->bmiHeader.biCompression : 0;
+    HBITMAP Bitmap;
+
+    if (Usage != DIB_RGB_COLORS && Usage != DIB_PAL_COLORS && Usage != DIB_PAL_INDICES)
+    {
+        EngSetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    if (BmInfo && BmInfo->bmiHeader.biSize >= sizeof(BITMAPINFOHEADER) && (Compression == BI_JPEG || Compression == BI_PNG))
+    {
+        EngSetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    Height = abs(Height);
+    Bitmap = NtGdiCreateCompatibleBitmap(hDC, Width, Height);
+
+    if (Bitmap)
+    {
+        if (!(InitFlags & CBM_INIT) || !InitData || !BmInfo || GreSetDIBitsInternal(hDC, Bitmap, 0, Height, InitData, BmInfo, Usage, ContentSize, BmInfoSize, XForm))
+            return Bitmap;
+
+        GreDeleteObject(Bitmap);
+    }
+
+    return NULL;
+}
+
+void*
+NTAPI
+GreSetDIBitsInternal(
+    HDC hDC,
+    HBITMAP Bitmap,
+    INT Width,
+    INT Height,
+    void* InitData,
+    const BITMAPINFO* BmInfo,
+    DWORD Usage,
+    UINT ContentSize,
+    UINT BmInfoSize,
+    HANDLE XForm)
+{
+    DPRINT1("GreSetDIBitsInternal(%p, %p, Width=%d, Height=%d, %p, %p, Usage=%u, ContentSize=%d, BmInfoSize=%d, %p)\n", hDC, Bitmap, Width, Height, InitData, BmInfo, Usage, ContentSize, BmInfoSize, XForm);
+    return NULL;
 }
 
 HBITMAP
@@ -879,5 +1037,127 @@ NtGdiGetDCforBitmap(
     return hdc;
 }
 
+UINT
+NTAPI
+GreGetBitmapSize(
+    _In_ const BITMAPINFO* BmInfo,
+    _In_ DWORD Usage)
+{
+    DWORD HeaderSize = BmInfo->bmiHeader.biSize;
+    DWORD BitCount = BmInfo->bmiHeader.biBitCount;
+    DWORD ColourIndexes = BmInfo->bmiHeader.biClrUsed;
+    DWORD Compression = BmInfo->bmiHeader.biCompression;
+    int ColourBytes = 4;
+    DWORD Bytes = 0; // RBGQUAD something something
+    DWORD Size;
 
-/* EOF */
+    if (HeaderSize == sizeof(BITMAPCOREHEADER))
+    {
+        BitCount = ((BITMAPCOREINFO*)BmInfo)->bmciHeader.bcBitCount;
+        ColourBytes = 3;
+        ColourIndexes = 0;
+
+BitCountTest:
+        Bytes = 1 << 1;
+
+        if (BitCount != 1)
+        {
+            Bytes = 1 << 4;
+
+            if (BitCount != 4)
+            {
+                Bytes = 1 << 8;
+
+                if (BitCount != 8)
+                {
+                    if (Usage == DIB_PAL_COLORS)
+                        Usage = DIB_RGB_COLORS;
+
+                    if (BitCount != 16 && BitCount != 24 && BitCount != 32)
+                        return 0;
+
+                    Bytes = 0;
+                }
+            }
+        }
+
+        goto Calculation;
+    }
+
+    if (HeaderSize < sizeof(BITMAPINFOHEADER))
+        return 0;
+
+    if (Compression != BI_BITFIELDS)
+    {
+        switch (Compression)
+        {
+            case BI_BITFIELDS:
+            {
+                if (Usage == DIB_PAL_COLORS)
+                    Usage = DIB_RGB_COLORS;
+
+                if (BitCount != 16 && BitCount != 32)
+                    return 0;
+
+                if (HeaderSize == sizeof(BITMAPINFOHEADER))
+                    ColourIndexes = 3;
+            }
+
+            case BI_RGB:
+                goto BitCountTest;
+
+            case BI_RLE4:
+            case BI_CMYKRLE8:
+            {
+                if (BitCount != 4)
+                    return 0;
+
+                Bytes = 16;
+                break;
+            }
+
+            case BI_RLE8:
+            case BI_CMYK:
+            {
+                if (BitCount != 8)
+                    return 0;
+
+                Bytes = 256;
+                break;
+            }
+
+            case BI_JPEG:
+            case BI_PNG:
+            {
+                break;
+            }
+
+            default:
+            {
+                DPRINT1("Unknown bitmap compression format: %u\n", Compression);
+                return 0;
+            }
+        }
+    }
+
+Calculation:
+    // There can ever only be as many colour bytes as ColourIndexes.
+    if (ColourIndexes && ColourIndexes <= Bytes)
+        Bytes = ColourIndexes;
+
+    if (Usage == DIB_PAL_COLORS)
+    {
+        ColourBytes = 2;
+    }
+    else if (Usage == DIB_PAL_INDICES)
+    {
+        ColourBytes = 0;
+    }
+
+    Size = (ColourBytes * Bytes + HeaderSize + 3) & ~3;
+
+    if (Size >= HeaderSize)
+        return Size;
+    else
+        return 0;
+}
